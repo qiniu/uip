@@ -24,6 +24,9 @@ func TestDb_Query(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, info)
 	log.Println(db.Query(ip))
+	assert.Equal(t, "中国", info.Country)
+	assert.NotNil(t, db.VersionInfo())
+	assert.True(t, db.VersionInfo().HasIpV4())
 }
 
 func TestDbv6_Query(t *testing.T) {
@@ -40,6 +43,9 @@ func TestDbv6_Query(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, info)
 	log.Println(db.Query(ip))
+	assert.Equal(t, "美国", info.Country)
+	assert.NotNil(t, db.VersionInfo())
+	assert.True(t, db.VersionInfo().HasIpV6())
 }
 
 // only search ipdb
@@ -68,8 +74,8 @@ func BenchmarkDb_Query(b *testing.B) {
 }
 
 // cpu: Intel(R) Core(TM) i7-1068NG7 CPU @ 2.30GHz
-//BenchmarkDbv6_Query
-//BenchmarkDbv6_Query-8   	 2172760	       528.3 ns/op
+// BenchmarkDbv6_Query
+// BenchmarkDbv6_Query-8   	 2172760	       528.3 ns/op
 func BenchmarkDbv6_Query(b *testing.B) {
 	ipdbPath := os.Getenv("IPDBv6_PATH")
 	if ipdbPath == "" {
@@ -86,3 +92,4 @@ func BenchmarkDbv6_Query(b *testing.B) {
 		_, err = db.Query(ip)
 	}
 }
+
