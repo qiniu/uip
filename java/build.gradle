@@ -1,0 +1,76 @@
+apply plugin: 'java'
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+version = '1.0'
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+//[compileJava, compileTestJava]*.options.collect {options ->
+//    options.debug = true
+//    options.deprecation = true
+//    options.compilerArgs.add '-Xlint'
+//    options.compilerArgs.add '-Xlint:-unchecked'
+//    options.compilerArgs.add '-Xlint:-serial'
+//    options.compilerArgs.add '-Xlint:-rawtypes'
+//}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:unchecked"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.code.gson:gson:2.10.1'
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+}
+
+
+task getHomeDir {
+    doLast {
+        println gradle.gradleHomeDir
+    }
+}
+
+apply plugin: 'checkstyle'
+
+def getGitVersionInfo() {
+    def v = 'git describe --tags'.execute().text.trim()
+    if (v == '') {
+        v = 'git rev-parse --short HEAD'.execute().text.trim()
+    }
+    println "version: $v"
+    return v
+}
+
+def versionName() {
+    return "0.1.0"
+//    return getGitVersionInfo()
+}
+
+def versionNameToCode(String version) {
+    String v = version.replaceAll(/\./, '').replaceAll('v', '')
+    try {
+        return v.toLong()
+    } catch (NumberFormatException e) {
+        return 0
+    }
+}
+
+String version = versionName()
+int code = versionNameToCode(version)
+
+setProperty('VERSION_NAME', version)
+setProperty('VERSION_CODE', code)
+
+apply from: 'mvn_push.gradle'
+
+apply plugin: 'eclipse'
+
+task gen_eclipse(dependsOn: [
+        'cleanEclipseProject', 'cleanEclipseClasspath',
+        'eclipseProject', 'eclipseClasspath'])
+eclipseProject.mustRunAfter cleanEclipseProject
+eclipseClasspath.mustRunAfter cleanEclipseClasspath
