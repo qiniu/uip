@@ -18,6 +18,7 @@ func main() {
 	output := flag.String("o", "", "output file list,split by ','")
 	rule := flag.String("r", "", "field select rule")
 	line := flag.String("line", "", "isp line file")
+	lineReplace := flag.Bool("line-replace", false, "replace line info")
 	flag.Parse()
 	d, err := convert.NewDumper(*input)
 	if err != nil {
@@ -38,7 +39,11 @@ func main() {
 			return
 		}
 		log.Println("line", lineQ.VersionInfo())
-		operate.AttachLineByCidr(ipData, ver, query.GetIntern(lineQ))
+		if *lineReplace {
+			operate.ReplaceLineByCidr(ipData, ver, query.GetIntern(lineQ))
+		} else {
+			operate.AttachLineByCidr(ipData, ver, query.GetIntern(lineQ))
+		}
 	}
 	operate.AttachDistrict(ipData)
 
