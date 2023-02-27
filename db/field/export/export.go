@@ -145,17 +145,6 @@ func (e *Exporter) Export(fieldMap []field.Pair, data map[string]string) []strin
 	return ret
 }
 
-// todo support condition regression, country=中国*, country=in(中国,美国)
-// ParseRule 构造字段选择器
-// 用于选择输出的字段，支持简单的匹配逻辑
-// 输入的参数格式为: <fields>[|<rule1>:<fields>|<rule2>:<fields>|<default fields>]
-// @ <fields> - 字段列表，表示需要输出的字段，字段之间使用","分隔
-// @ <rule> - 匹配规则，非必填项，以<key>=<value>表示，匹配上的话，则使用<rule>对应的<fields>，匹配优先级为<fields>的顺序
-// @ sep - Select函数输出数据的分隔符，默认为","
-// 举例
-// country,province,city,isp,asn|country=!中国:country
-// 针对国家区分IP库精度，若国家是"中国"，返回"国家,省份,城市,运营商,ASN"，若国家不是"中国"，返回"国家"
-
 func ParseRule(rule string) *Exporter {
 	var ret = &Exporter{
 		filters: make([]*_Filter, 0),
