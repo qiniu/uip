@@ -9,20 +9,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 
- final class Reader {
+final class Reader {
 
+    private static final int cacheDepth = 12;
     MetaData meta;
     private int fileSize;
     private int nodeCount;
     private byte[] data;
-
     private int v4offset;
-
     private int[] ipv4Cache;
 
-    private static final int cacheDepth = 12;
-
-     Reader(byte[] data) throws InvalidDatabaseException {
+    Reader(byte[] data) throws InvalidDatabaseException {
         this.data = data;
         this.fileSize = data.length;
         if (this.fileSize < 5) {
@@ -78,12 +75,6 @@ import java.util.Arrays;
         return new byte[]{(byte) i1, (byte) i2};
     }
 
-    private int bytesToIndex(byte[] b) {
-         int i1 = (0xFF&(int)(b[0])) << 8 >>(16-cacheDepth);
-         int i2 = (0xFF&(int)(b[1])) >> (16-cacheDepth);
-        return i1 | i2;
-    }
-
     private static long bytesToLong(byte a, byte b, byte c, byte d) {
         return int2long((((a & 0xff) << 24) | ((b & 0xff) << 16) | ((c & 0xff) << 8) | (d & 0xff)));
     }
@@ -96,10 +87,16 @@ import java.util.Arrays;
         return l;
     }
 
+    private int bytesToIndex(byte[] b) {
+        int i1 = (0xFF & (int) (b[0])) << 8 >> (16 - cacheDepth);
+        int i2 = (0xFF & (int) (b[1])) >> (16 - cacheDepth);
+        return i1 | i2;
+    }
+
     private void initCache() {
-        ipv4Cache = new int[1<<cacheDepth];
+        ipv4Cache = new int[1 << cacheDepth];
         //construct cache from binary trie tree for reduce read memory time
-        for(int i = 0; i < ipv4Cache.length; i++) {
+        for (int i = 0; i < ipv4Cache.length; i++) {
             byte[] b = indexToBytes(i);
             int node = readDepth(v4offset, cacheDepth, 0, b);
             ipv4Cache[i] = node;
@@ -158,12 +155,12 @@ import java.util.Arrays;
     }
 
     private int readDepth(int node, int depth, int i, byte[] binary) {
-    	for (; i < depth; i++) {
-    		if (node >= this.nodeCount) {
-    			break;
-    		}
-    		node = this.readNode(node, 1 & ((0xFF & binary[i / 8]) >> 7 - (i % 8)));
-    	}
+        for (; i < depth; i++) {
+            if (node >= this.nodeCount) {
+                break;
+            }
+            node = this.readNode(node, 1 & ((0xFF & binary[i / 8]) >> 7 - (i % 8)));
+        }
         return node;
     }
 
@@ -176,7 +173,7 @@ import java.util.Arrays;
         if (bit == 32) {
             node = this.v4offset;
         }
-        int i =0;
+        int i = 0;
         if (ipv4Cache != null && bit == 32) {
             int index = bytesToIndex(binary);
             node = ipv4Cache[index];
