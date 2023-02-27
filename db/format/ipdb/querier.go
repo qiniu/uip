@@ -10,7 +10,7 @@ type Querier struct {
 	r *reader
 }
 
-func NewQuerier(data []byte) (inf.Query, error) {
+func newQuerier(data []byte) (inf.Query, error) {
 	db, err := newReaderFromBytes(data)
 	if err != nil {
 		return nil, err

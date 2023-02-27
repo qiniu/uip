@@ -33,10 +33,11 @@ const (
 
 // Writer IPDB 写入工具
 type Writer struct {
-	Meta      MetaData
-	node      [][2]int
-	dataHash  map[string]int
-	dataChunk *bytes.Buffer
+	Meta            MetaData
+	node            [][2]int
+	dataHash        map[string]int
+	dataChunk       *bytes.Buffer
+	continentOffset int
 }
 
 // NewWriter 初始化 IPDB 写入实例
@@ -46,12 +47,19 @@ func NewWriter(meta MetaData, languages map[string]int) *Writer {
 	} else {
 		meta.Languages = languages
 	}
+	contitnentOffset := -1
+	for i, field := range meta.Fields {
+		if strings.ToLower(field) == "continent" {
+			contitnentOffset = i
+		}
+	}
 
 	return &Writer{
-		Meta:      meta,
-		node:      [][2]int{{}},
-		dataChunk: &bytes.Buffer{},
-		dataHash:  make(map[string]int),
+		Meta:            meta,
+		node:            [][2]int{{}},
+		dataChunk:       &bytes.Buffer{},
+		dataHash:        make(map[string]int),
+		continentOffset: contitnentOffset,
 	}
 }
 
@@ -112,6 +120,24 @@ func (p *Writer) insert(ipNet *net.IPNet, values []string) error {
 		log.Printf("cidr conflict %s %s\n", ipNet, values)
 		return db.ErrCIDRConflict
 	}
+	if p.continentOffset >= 0 {
+		switch values[p.continentOffset] {
+		case "亚洲":
+			values[p.continentOffset] = "AS"
+		case "欧洲":
+			values[p.continentOffset] = "EU"
+		case "北美洲":
+			values[p.continentOffset] = "NA"
+		case "南美洲":
+			values[p.continentOffset] = "SA"
+		case "大洋洲":
+			values[p.continentOffset] = "OC"
+		case "非洲":
+			values[p.continentOffset] = "AF"
+		case "南极洲":
+			values[p.continentOffset] = "AN"
+		}
+	}
 	offset := p.Fields(values)
 	p.node[node][index] = -offset
 	return nil
@@ -130,7 +156,7 @@ func (p *Writer) resolve(offset int) string {
 
 // Nodes 获取CIDR地址所在节点和index
 // 将补全Node中间链路，如果中间链路已经有数据，将无法写入新数据
-func (p *Writer) Nodes(ip net.IP, mask int) (node, index int, ok bool) {
+func (p *Writer) Nodes(ip net.IP, mask int) (node, indexBit int, ok bool) {
 	// 如果传入的是IPv4，子网掩码增加96位( len(IPv6)-len(IPv4) )
 	// 统一扩展为IPv6的子网掩码进行处理
 	maxMask := mask - 1
@@ -143,15 +169,15 @@ func (p *Writer) Nodes(ip net.IP, mask int) (node, index int, ok bool) {
 		}
 	}
 	for i := 0; i < maxMask; i++ {
-		index = ((0xFF & int(ip[i>>3])) >> uint(7-(i%8))) & 1
-		if p.node[node][index] == 0 {
+		indexBit = ((0xFF & int(ip[i>>3])) >> uint(7-(i%8))) & 1
+		if p.node[node][indexBit] == 0 {
 			p.node = append(p.node, [2]int{})
-			p.node[node][index] = len(p.node) - 1
+			p.node[node][indexBit] = len(p.node) - 1
 		}
-		if p.node[node][index] < 0 {
-			return node, index, false
+		if p.node[node][indexBit] < 0 {
+			return node, indexBit, false
 		}
-		node = p.node[node][index]
+		node = p.node[node][indexBit]
 	}
 	return node, ((0xFF & int(ip[maxMask>>3])) >> uint(7-(maxMask%8))) & 1, true
 }

@@ -10,21 +10,8 @@ import (
 	"github.com/qiniu/uip/db/inf"
 )
 
-type packer struct {
-}
-
-func NewPacker() inf.Pack {
-	return &packer{}
-}
-
-func replaceComma(s *inf.IpRaw) {
-	for i, v := range s.FieldValues {
-		s.FieldValues[i] = strings.Replace(v, ",", "_", -1)
-	}
-}
-
-func (p *packer) Pack(ipd *inf.IpData, v *inf.VersionInfo, writer io.Writer) error {
-	verStr, err := json.Marshal(v)
+func pack(ipd *inf.IpData, writer io.Writer) error {
+	verStr, err := json.Marshal(ipd.Version)
 	if err != nil {
 		return err
 	}
@@ -39,4 +26,10 @@ func (p *packer) Pack(ipd *inf.IpData, v *inf.VersionInfo, writer io.Writer) err
 		}
 	}
 	return nil
+}
+
+func replaceComma(s *inf.IpRaw) {
+	for i, v := range s.FieldValues {
+		s.FieldValues[i] = strings.Replace(v, ",", "_", -1)
+	}
 }

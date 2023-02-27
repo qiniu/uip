@@ -1,22 +1,17 @@
 package convert
 
 import (
+	"github.com/qiniu/uip/db"
+	"github.com/qiniu/uip/db/field/export"
+	"github.com/qiniu/uip/db/field/operate"
+	"github.com/qiniu/uip/db/format"
+	"github.com/qiniu/uip/db/inf"
 	"log"
 	"os"
 	"path"
-	"time"
-
-	"github.com/qiniu/uip/db"
-	"github.com/qiniu/uip/db/field/export"
-	"github.com/qiniu/uip/db/format"
-	"github.com/qiniu/uip/db/inf"
 )
 
-type Dumper struct {
-	traverse inf.Dump
-}
-
-func NewDumper(ipFile string) (*Dumper, error) {
+func DumpFile(ipFile, rule string, ops []operate.Operate) (*inf.IpData, error) {
 	data, err := os.ReadFile(ipFile)
 	if err != nil {
 		log.Println("Open ip file failed ", ipFile, err)
@@ -28,29 +23,17 @@ func NewDumper(ipFile string) (*Dumper, error) {
 		log.Println("Unsupported ip file format ", ipFile, extend)
 		return nil, db.ErrUnsupportedFormat
 	}
-	traverse, err := create(data)
-	if err != nil {
-		log.Println("New traverse failed ", ipFile, extend, err)
-		return nil, err
-	}
-
-	return &Dumper{
-		traverse: traverse,
-	}, nil
-}
-
-func (d *Dumper) Dump(rule string) (*inf.IpData, *inf.VersionInfo, error) {
-	v := d.traverse.VersionInfo()
-	log.Println("version", v)
 	if rule == "" {
 		rule = export.DefaultRule
 	}
-	exp := export.ParseRule(rule)
-	t0 := time.Now()
-	all, err := d.traverse.Dump(exp)
+	ipData, err := create(data, export.ParseRule(rule))
 	if err != nil {
-		return nil, nil, err
+		log.Println("Dump ip file failed ", ipFile, err)
+		return nil, err
 	}
-	log.Println("time elapse", time.Since(t0))
-	return all, v, nil
+
+	for _, op := range ops {
+		op(ipData)
+	}
+	return ipData, nil
 }

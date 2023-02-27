@@ -18,7 +18,7 @@ package ipdb
 
 // Copy From https://github.com/ipipdotnet/ipdb-go
 // modify by sjzar
-// modify: Find / FindMap return ipNet
+// modify: Find / findMap return ipNet
 
 import (
 	"encoding/binary"
@@ -36,9 +36,13 @@ type reader struct {
 	nodeCount int
 	v4offset  int
 
-	meta MetaData
-	data []byte
+	meta            MetaData
+	data            []byte
+	continentOffset int
+	ipV4Cache       []int
 }
+
+const cacheDepth = 12
 
 func newReaderFromBytes(data []byte) (*reader, error) {
 	var meta MetaData
@@ -57,13 +61,21 @@ func newReaderFromBytes(data []byte) (*reader, error) {
 	}
 
 	db := &reader{
-		fileSize:  len(data),
-		nodeCount: meta.NodeCount,
-		meta:      meta,
-		data:      data[4+metaLength:],
+		fileSize:        len(data),
+		nodeCount:       meta.NodeCount,
+		meta:            meta,
+		data:            data[4+metaLength:],
+		continentOffset: -1,
+	}
+	//find offset of continent in meta.fields
+	for i, v := range meta.Fields {
+		if v == FieldContinentCode {
+			db.continentOffset = i
+			break
+		}
 	}
 
-	if db.v4offset == 0 {
+	if db.HasIPv4() {
 		node := 0
 		for i := 0; i < 96 && node < db.nodeCount; i++ {
 			if i >= 80 {
@@ -73,23 +85,70 @@ func newReaderFromBytes(data []byte) (*reader, error) {
 			}
 		}
 		db.v4offset = node
+		db.initCache()
 	}
 	return db, nil
 }
 
-func (db *reader) FindMap(addr net.IP, language string) (*net.IPNet, map[string]string, error) {
+func indexToBytes(i int) []byte {
+	return []byte{byte((i << (16 - cacheDepth)) >> 8), byte(0xFF & (i << (16 - cacheDepth)))}
+}
 
-	data, ipNet, err := db.find1(addr, language)
+func bytesToIndex(b []byte) int {
+	return (0xFF&int(b[0]))<<8>>(16-cacheDepth) | (0xFF&int(b[1]))>>(16-cacheDepth)
+}
+
+func (db *reader) initCache() {
+	db.ipV4Cache = make([]int, 1<<cacheDepth)
+	//construct cache from binary trie tree for reduce read memory time
+	for i := 0; i < len(db.ipV4Cache); i++ {
+		b := indexToBytes(i)
+		node, _ := db.readDepth(db.v4offset, cacheDepth, 0, b)
+		db.ipV4Cache[i] = node
+	}
+	return
+}
+
+func (db *reader) findMap(addr net.IP, language string) (*net.IPNet, map[string]string, error) {
+	ret, ipNet, err := db.find1(addr, language)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	info := make(map[string]string, len(db.meta.Fields))
-	for k, v := range data {
-		info[db.meta.Fields[k]] = v
+	m := make(map[string]string)
+	for i, v := range db.meta.Fields {
+		m[v] = ret[i]
 	}
+	return ipNet, m, nil
+}
 
-	return ipNet, info, nil
+func (db *reader) decodeInfo(body []byte, off int) ([]string, error) {
+	str := (*string)(unsafe.Pointer(&body))
+	tmp := strings.Split(*str, "\t")
+
+	if (off + len(db.meta.Fields)) > len(tmp) {
+		return nil, db2.ErrDatabaseError
+	}
+	ret := tmp[off : off+len(db.meta.Fields)]
+	if db.continentOffset >= 0 {
+		switch ret[db.continentOffset] {
+		case "AS":
+			ret[db.continentOffset] = "亚洲"
+		case "EU":
+			ret[db.continentOffset] = "欧洲"
+		case "NA":
+			ret[db.continentOffset] = "北美洲"
+		case "SA":
+			ret[db.continentOffset] = "南美洲"
+		case "AF":
+			ret[db.continentOffset] = "非洲"
+		case "OC":
+			ret[db.continentOffset] = "大洋洲"
+		case "AN":
+			ret[db.continentOffset] = "南极洲"
+		}
+	}
+	return ret, nil
 }
 
 func (db *reader) find1(addr net.IP, language string) ([]string, *net.IPNet, error) {
@@ -97,20 +156,12 @@ func (db *reader) find1(addr net.IP, language string) ([]string, *net.IPNet, err
 	if !ok {
 		return nil, nil, db2.ErrNoSupportLanguage
 	}
-
 	body, ipNet, err := db.find0(addr)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	str := (*string)(unsafe.Pointer(&body))
-	tmp := strings.Split(*str, "\t")
-
-	if (off + len(db.meta.Fields)) > len(tmp) {
-		return nil, nil, db2.ErrDatabaseError
-	}
-
-	return tmp[off : off+len(db.meta.Fields)], ipNet, nil
+	ret, err := db.decodeInfo(body, off)
+	return ret, ipNet, err
 }
 
 func (db *reader) find0(ipv net.IP) ([]byte, *net.IPNet, error) {
@@ -154,15 +205,16 @@ func (db *reader) search(ip net.IP, bitCount int) (int, int, error) {
 	} else {
 		node = 0
 	}
-
-	var i = 0
-	for ; i < bitCount; i++ {
-		if node >= db.nodeCount {
-			break
+	i := 0
+	if db.ipV4Cache != nil && bitCount == 32 {
+		node = db.ipV4Cache[bytesToIndex(ip)]
+		if node > db.nodeCount {
+			return node, i, nil
 		}
-		node = db.readNode(node, ((0xFF&int(ip[i>>3]))>>uint(7-(i%8)))&1)
+		i = cacheDepth
 	}
 
+	node, i = db.readDepth(node, bitCount, i, ip)
 	if node > db.nodeCount {
 		return node, i, nil
 	}
@@ -170,8 +222,18 @@ func (db *reader) search(ip net.IP, bitCount int) (int, int, error) {
 	return -1, 0, db2.ErrDataNotExists
 }
 
-func (db *reader) readNode(node, index int) int {
-	off := node*8 + index*4
+func (db *reader) readDepth(node int, depth int, i int, ip []byte) (int, int) {
+	for ; i < depth; i++ {
+		if node >= db.nodeCount {
+			break
+		}
+		node = db.readNode(node, ((0xFF&int(ip[i>>3]))>>uint(7-(i%8)))&1)
+	}
+	return node, i
+}
+
+func (db *reader) readNode(node, indexBit int) int {
+	off := node*8 + indexBit*4
 	return int(binary.BigEndian.Uint32(db.data[off : off+4]))
 }
 

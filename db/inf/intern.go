@@ -7,8 +7,9 @@ import (
 )
 
 type IpData struct {
-	Fields []string
-	Ips    []IpRaw
+	Fields  []string
+	Version *VersionInfo
+	Ips     []IpRaw
 }
 
 type IpRaw struct {
@@ -16,7 +17,7 @@ type IpRaw struct {
 	FieldValues []string
 }
 
-type NewDumper func([]byte) (Dump, error)
+type Dump func([]byte, Exporter) (*IpData, error)
 
 type Exporter interface {
 	Fields() []string
@@ -24,16 +25,6 @@ type Exporter interface {
 	Export(fieldMap []field.Pair, data map[string]string) []string
 }
 
-type Dump interface {
-	// Dump does not support reenter
-	Dump(exporter Exporter) (*IpData, error)
-	VersionInfo() *VersionInfo
-}
-
-type NewPacker func() Pack
-
-type Pack interface {
-	Pack(ipd *IpData, v *VersionInfo, writer io.Writer) error
-}
+type Pack func(*IpData, io.Writer) error
 
 type Find func(ip net.IP) (cidr *net.IPNet, record map[string]string, err error)

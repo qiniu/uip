@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 
-public final class Reader {
+ final class Reader {
 
     MetaData meta;
     private int fileSize;
@@ -18,7 +18,11 @@ public final class Reader {
 
     private int v4offset;
 
-    public Reader(byte[] data) throws InvalidDatabaseException {
+    private int[] ipv4Cache;
+
+    private static final int cacheDepth = 12;
+
+     Reader(byte[] data) throws InvalidDatabaseException {
         this.data = data;
         this.fileSize = data.length;
         if (this.fileSize < 5) {
@@ -60,9 +64,24 @@ public final class Reader {
                     node = this.readNode(node, 0);
                 }
             }
-
             this.v4offset = node;
+            initCache();
+        } else {
+            this.ipv4Cache = null;
+            this.v4offset = 0;
         }
+    }
+
+    private static byte[] indexToBytes(int i) {
+        int i1 = (i << (16 - cacheDepth)) >> 8;
+        int i2 = 0xFF & (i << (16 - cacheDepth));
+        return new byte[]{(byte) i1, (byte) i2};
+    }
+
+    private int bytesToIndex(byte[] b) {
+         int i1 = (0xFF&(int)(b[0])) << 8 >>(16-cacheDepth);
+         int i2 = (0xFF&(int)(b[1])) >> (16-cacheDepth);
+        return i1 | i2;
     }
 
     private static long bytesToLong(byte a, byte b, byte c, byte d) {
@@ -75,6 +94,16 @@ public final class Reader {
             l |= 0x080000000L;
         }
         return l;
+    }
+
+    private void initCache() {
+        ipv4Cache = new int[1<<cacheDepth];
+        //construct cache from binary trie tree for reduce read memory time
+        for(int i = 0; i < ipv4Cache.length; i++) {
+            byte[] b = indexToBytes(i);
+            int node = readDepth(v4offset, cacheDepth, 0, b);
+            ipv4Cache[i] = node;
+        }
     }
 
     public String[] find(byte[] addr, String language) throws IPFormatException, InvalidDatabaseException {
@@ -126,7 +155,16 @@ public final class Reader {
 
         final String data = new String(this.data, resolved + 2, size, StandardCharsets.UTF_8);
         return Arrays.copyOfRange(data.split("\t", this.meta.fields.length * this.meta.languages.size()), off, off + this.meta.fields.length);
+    }
 
+    private int readDepth(int node, int depth, int i, byte[] binary) {
+    	for (; i < depth; i++) {
+    		if (node >= this.nodeCount) {
+    			break;
+    		}
+    		node = this.readNode(node, 1 & ((0xFF & binary[i / 8]) >> 7 - (i % 8)));
+    	}
+        return node;
     }
 
     private int findNode(byte[] binary) throws NotFoundException {
@@ -138,15 +176,16 @@ public final class Reader {
         if (bit == 32) {
             node = this.v4offset;
         }
-
-        for (int i = 0; i < bit; i++) {
+        int i =0;
+        if (ipv4Cache != null && bit == 32) {
+            int index = bytesToIndex(binary);
+            node = ipv4Cache[index];
             if (node > this.nodeCount) {
-                break;
+                return node;
             }
-
-            node = this.readNode(node, 1 & ((0xFF & binary[i / 8]) >> 7 - (i % 8)));
+            i = cacheDepth;
         }
-
+        node = readDepth(node, bit, i, binary);
         if (node > this.nodeCount) {
             return node;
         }

@@ -94,7 +94,7 @@ type RangeFields struct {
 	f []string
 }
 
-func MergeNearNetwork(ipd *inf.IpData, v *inf.VersionInfo) {
+func MergeNearNetwork(ipd *inf.IpData) {
 	ipRanges := make([]RangeFields, 0, len(ipd.Ips))
 	var prev RangeFields
 	for _, ip := range ipd.Ips {
@@ -128,5 +128,5 @@ func MergeNearNetwork(ipd *inf.IpData, v *inf.VersionInfo) {
 			})
 		}
 	}
-	v.Count = uint32(len(ipd.Ips))
+	ipd.Version.Count = uint32(len(ipd.Ips))
 }

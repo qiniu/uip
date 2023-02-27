@@ -10,9 +10,9 @@ import (
 	"github.com/qiniu/uip/db/inf"
 )
 
-func AttachLineByCidr(data *inf.IpData, ver *inf.VersionInfo, line inf.Query) {
+func AttachLineByCidr(data *inf.IpData, line inf.Query) {
 	lineVer := fmt.Sprintf("%s-%d", line.VersionInfo().Version, line.VersionInfo().Build)
-	ver.ExtraInfo = append(ver.ExtraInfo, lineVer)
+	data.Version.ExtraInfo = append(data.Version.ExtraInfo, lineVer)
 	var lineOffset int
 	if lineOffset = field.Offset(field.Line, data.Fields); lineOffset == -1 {
 		data.Fields = append(data.Fields, field.Line)
@@ -36,8 +36,8 @@ func AttachLineByCidr(data *inf.IpData, ver *inf.VersionInfo, line inf.Query) {
 	}
 }
 
-func AttachLineByAsn(data *inf.IpData, ver *inf.VersionInfo, asnLine map[string]string, asnLineVer string) {
-	ver.ExtraInfo = append(ver.ExtraInfo, asnLineVer)
+func AttachLineByAsn(data *inf.IpData, asnLine map[string]string, asnLineVer string) {
+	data.Version.ExtraInfo = append(data.Version.ExtraInfo, asnLineVer)
 	var hasLine bool
 	var lineOffset int
 	var asnOffset int
@@ -92,9 +92,9 @@ func queryLine(ipnet *net.IPNet, line inf.Query) (ispline string) {
 	return
 }
 
-func ReplaceLineByCidr(data *inf.IpData, ver *inf.VersionInfo, line inf.Query) {
+func ReplaceLineByCidr(data *inf.IpData, line inf.Query) {
 	lineVer := fmt.Sprintf("%s-%d", line.VersionInfo().Version, line.VersionInfo().Build)
-	ver.ExtraInfo = append(ver.ExtraInfo, lineVer)
+	data.Version.ExtraInfo = append(data.Version.ExtraInfo, lineVer)
 	ispOffset := field.Offset(field.ISP, data.Fields)
 	if ispOffset == -1 {
 		return

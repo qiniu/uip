@@ -14,13 +14,26 @@ import (
 	"github.com/qiniu/uip/ipnet"
 )
 
+func dump(data []byte, exporter inf.Exporter) (*inf.IpData, error) {
+	t, err := newDumper(data)
+	if err != nil {
+		return nil, err
+	}
+	i, err := t.Dump(exporter)
+	if err != nil {
+		return nil, err
+	}
+	i.Version = t.Version
+	return i, nil
+}
+
 type traversal struct {
 	lines   []string
 	Fields  []string
 	Version *inf.VersionInfo
 }
 
-func NewDumper(data []byte) (tRet inf.Dump, err error) {
+func newDumper(data []byte) (tRet *traversal, err error) {
 	t := &traversal{}
 	bio := bytes.NewReader(data)
 	scanner := bufio.NewScanner(bio)

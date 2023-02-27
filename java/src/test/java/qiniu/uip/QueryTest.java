@@ -16,7 +16,7 @@ public class QueryTest {
             return;
         }
         Query q = Query.create(file);
-        IpInfo info = q.query("220.248.53.61");
+        IpInfo info = q.query("220.248.53.1");
         System.out.println(info);
         assert info.country.equals("中国");
 

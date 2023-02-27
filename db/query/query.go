@@ -28,10 +28,7 @@ func NewDb(file string) (*Db, error) {
 func NewDbFromBytes(kind string, b []byte) (*Db, error) {
 	create := format.GetQueryFormat(kind)
 	if create == nil {
-		create = format.GetQueryFormatByDetect(b)
-		if create == nil {
-			return nil, db.ErrUnsupportedFormat
-		}
+		return nil, db.ErrUnsupportedFormat
 	}
 	q, err := create(b)
 	if err != nil {
@@ -98,22 +95,7 @@ func (q *Db) Query(ip net.IP) (*inf.IpInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	switch info.Continent {
-	case "AS":
-		info.Continent = "亚洲"
-	case "EU":
-		info.Continent = "欧洲"
-	case "NA":
-		info.Continent = "北美洲"
-	case "SA":
-		info.Continent = "南美洲"
-	case "AF":
-		info.Continent = "非洲"
-	case "OC":
-		info.Continent = "大洋洲"
-	case "AN":
-		info.Continent = "南极洲"
-	}
+
 	return info, nil
 }
 

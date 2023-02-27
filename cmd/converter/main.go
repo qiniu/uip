@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/qiniu/uip/db/inf"
 	"log"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/qiniu/uip/db/field/operate"
 	_ "github.com/qiniu/uip/db/format/awdb"
 	_ "github.com/qiniu/uip/db/format/ipdb"
+	_ "github.com/qiniu/uip/db/format/memip"
 	_ "github.com/qiniu/uip/db/format/plain"
 	"github.com/qiniu/uip/db/query"
 )
@@ -20,17 +22,7 @@ func main() {
 	line := flag.String("line", "", "isp line file")
 	lineReplace := flag.Bool("line-replace", false, "replace line info")
 	flag.Parse()
-	d, err := convert.NewDumper(*input)
-	if err != nil {
-		log.Println(err)
-		flag.PrintDefaults()
-		return
-	}
-	ipData, ver, err := d.Dump(*rule)
-	log.Println(len(ipData.Ips), ver, err)
-	operate.ReplaceShortage(ipData)
-	operate.TrimAsnIspDup(ipData)
-	operate.MergeNearNetwork(ipData, ver)
+	ops := operate.DefaultOperates
 	if *line != "" {
 		lineQ, err := query.NewDb(*line)
 		if err != nil {
@@ -39,17 +31,25 @@ func main() {
 			return
 		}
 		log.Println("line", lineQ.VersionInfo())
+		f := operate.AttachLineByCidr
 		if *lineReplace {
-			operate.ReplaceLineByCidr(ipData, ver, query.GetIntern(lineQ))
-		} else {
-			operate.AttachLineByCidr(ipData, ver, query.GetIntern(lineQ))
+			f = operate.ReplaceLineByCidr
 		}
+		ops = append(ops, func(data *inf.IpData) {
+			f(data, query.GetIntern(lineQ))
+		})
 	}
-	operate.AttachDistrict(ipData)
-
+	ops = append(ops, operate.AttachDistrict)
+	ipData, err := convert.DumpFile(*input, *rule, ops)
+	log.Println(len(ipData.Ips), ipData.Version, err)
+	if err != nil {
+		log.Println(err)
+		flag.PrintDefaults()
+		return
+	}
 	outputs := strings.Split(*output, ",")
 	for _, output := range outputs {
-		err = convert.Pack(output, ipData, ver)
+		err = convert.PackFile(output, ipData)
 		if err != nil {
 			log.Println(err)
 			flag.PrintDefaults()

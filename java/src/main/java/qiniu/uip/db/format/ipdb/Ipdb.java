@@ -8,11 +8,11 @@ import qiniu.uip.db.format.Query;
 import qiniu.uip.db.format.QueryBuilder;
 import qiniu.uip.util.Strings;
 
-public final class InternDb implements Query {
+public final class Ipdb implements Query {
 
     private final Reader reader;
 
-    public InternDb(byte[] dat) throws InvalidDatabaseException {
+    public Ipdb(byte[] dat) throws InvalidDatabaseException {
         reader = new Reader(dat);
     }
 
@@ -98,8 +98,8 @@ public final class InternDb implements Query {
         public Builder() {
         }
 
-        public InternDb build(byte[] dat) throws InvalidDatabaseException {
-            return new InternDb(dat);
+        public Ipdb build(byte[] dat) throws InvalidDatabaseException {
+            return new Ipdb(dat);
         }
     }
 }

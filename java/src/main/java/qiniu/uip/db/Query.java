@@ -2,7 +2,7 @@ package qiniu.uip.db;
 
 import qiniu.uip.db.format.Formats;
 import qiniu.uip.db.format.QueryBuilder;
-import qiniu.uip.db.format.ipdb.InternDb;
+import qiniu.uip.db.format.ipdb.Ipdb;
 import qiniu.uip.util.File;
 import qiniu.uip.util.IPAddress;
 import qiniu.uip.util.Strings;
@@ -11,7 +11,7 @@ import java.io.IOException;
 
 public final class Query {
     static {
-        Formats.registerQueryFormat(".ipdb", new InternDb.Builder());
+        Formats.registerQueryFormat(".ipdb", new Ipdb.Builder());
     }
 
     private qiniu.uip.db.format.Query q;

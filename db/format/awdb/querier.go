@@ -18,7 +18,7 @@ type querier struct {
 	reader *Reader
 }
 
-func NewQuerier(data []byte) (tRet inf.Query, err error) {
+func newQuerier(data []byte) (tRet inf.Query, err error) {
 	t := &querier{Data: data}
 	t.reader, err = FromBytes(data)
 	if err != nil {

@@ -7,6 +7,19 @@ import (
 	"net"
 )
 
+func dump(data []byte, exporter inf.Exporter) (*inf.IpData, error) {
+	t, err := NewDumper(data)
+	if err != nil {
+		return nil, err
+	}
+	i, err := t.dump(exporter)
+	if err != nil {
+		return nil, err
+	}
+	i.Version = t.versionInfo()
+	return i, nil
+}
+
 type traversal struct {
 	Data []byte
 
@@ -18,7 +31,7 @@ type traversal struct {
 	reader *Reader
 }
 
-func NewDumper(data []byte) (tRet inf.Dump, err error) {
+func NewDumper(data []byte) (tRet *traversal, err error) {
 	t := &traversal{Data: data}
 	t.reader, err = FromBytes(data)
 	if err != nil {
@@ -33,8 +46,8 @@ func NewDumper(data []byte) (tRet inf.Dump, err error) {
 }
 
 func (t *traversal) check() error {
-	if t.VersionInfo().HasIpV4() {
-		r, m, err := t.Find(net.ParseIP("8.8.8.8"))
+	if t.versionInfo().HasIpV4() {
+		r, m, err := t.find(net.ParseIP("8.8.8.8"))
 		if err != nil {
 			return err
 		}
@@ -43,11 +56,11 @@ func (t *traversal) check() error {
 	return nil
 }
 
-func (t *traversal) Dump(exporter inf.Exporter) (*inf.IpData, error) {
-	return export.BuildIPData(FieldsArray, exporter, t.VersionInfo(), t.Find)
+func (t *traversal) dump(exporter inf.Exporter) (*inf.IpData, error) {
+	return export.BuildIPData(FieldsArray, exporter, t.versionInfo(), t.find)
 }
 
-func (t *traversal) Find(ip net.IP) (*net.IPNet, map[string]string, error) {
+func (t *traversal) find(ip net.IP) (*net.IPNet, map[string]string, error) {
 	var record interface{}
 	ipNet, _, err := t.reader.LookupNetwork(ip, &record)
 	if err != nil {
@@ -61,6 +74,6 @@ func (t *traversal) Find(ip net.IP) (*net.IPNet, map[string]string, error) {
 	return ipNet, data, nil
 }
 
-func (t *traversal) VersionInfo() *inf.VersionInfo {
+func (t *traversal) versionInfo() *inf.VersionInfo {
 	return t.reader.version()
 }

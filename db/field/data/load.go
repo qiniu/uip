@@ -39,7 +39,6 @@ func LoadDefault() {
 	Load(field.City, CityList)
 	Load(field.Province, ProvinceList)
 	Load(field.ISP, ISPList)
-	Load(field.Continent, ContinentList)
 }
 
 func init() {

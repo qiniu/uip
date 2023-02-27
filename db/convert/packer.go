@@ -2,6 +2,7 @@ package convert
 
 import (
 	"bytes"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -11,36 +12,31 @@ import (
 	"github.com/qiniu/uip/db/inf"
 )
 
-func Pack(ipFile string, ipData *inf.IpData, info *inf.VersionInfo) error {
+func PackFile(ipFile string, ipData *inf.IpData) error {
 	file, err := os.Create(ipFile)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	extend := path.Ext(ipFile)
-	create := format.GetPackFormat(extend)
-	if create == nil {
-		log.Println("Unsupported ip file format ", ipFile, extend)
-		return db.ErrUnsupportedFormat
-	}
-	packer := create()
-	log.Println("packing", ipFile, info)
-	err = packer.Pack(ipData, info, file)
-	log.Println("pack done", ipFile, err)
-	return err
+	return PackWriter(extend, ipData, file)
 }
 
-func PackBytes(kind string, ipData *inf.IpData, info *inf.VersionInfo) ([]byte, error) {
-	create := format.GetPackFormat(kind)
-	if create == nil {
-		log.Println("Unsupported ip file format ", kind)
-		return nil, db.ErrUnsupportedFormat
-	}
-	packer := create()
+func PackBytes(kind string, ipData *inf.IpData) ([]byte, error) {
 	w := bytes.NewBuffer(nil)
-	err := packer.Pack(ipData, info, w)
+	err := PackWriter(kind, ipData, w)
 	if err != nil {
 		return nil, err
 	}
 	return w.Bytes(), nil
+}
+
+func PackWriter(kind string, ipData *inf.IpData, writer io.Writer) error {
+	create := format.GetPackFormat(kind)
+	if create == nil {
+		log.Println("Unsupported ip file format ", kind)
+		return db.ErrUnsupportedFormat
+	}
+
+	return create(ipData, writer)
 }
