@@ -12,6 +12,7 @@ public class QueryTest {
     @Test
     public void testQueryV4() throws IOException, IPFormatException {
         String file = System.getenv("IPDBv4_PATH");
+        file = "/Users/long/github/qiniu/uip/ipv4.ipdb";
         if (file == null) {
             return;
         }

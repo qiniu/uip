@@ -6,24 +6,26 @@ import (
 )
 
 type IpInfo struct {
-	Cidr      net.IPNet `json:"cidr"` //IP Range	IP段
-	Country   string    `json:"country,omitempty"`
-	District  string    `json:"district,omitempty"`
-	Province  string    `json:"province,omitempty"`
-	City      string    `json:"city,omitempty"`
-	Asn       string    `json:"asn,omitempty"`
-	Isp       string    `json:"isp,omitempty"`
-	Continent string    `json:"continent,omitempty"`
+	Country   string `json:"country,omitempty"`
+	District  string `json:"district,omitempty"`
+	Province  string `json:"province,omitempty"`
+	City      string `json:"city,omitempty"`
+	Asn       string `json:"asn,omitempty"`
+	Isp       string `json:"isp,omitempty"`
+	Continent string `json:"continent,omitempty"`
 
 	//line字段，是指 IP是通过哪个运营商连接上全国骨干网的， 主要是通过看AS的连接关系，
 	//比如AS55990与4811,4816,23724,58466,138950,9808,24400等AS连接，line就是 电信/联通/移动/华为；
 	Line string `json:"line,omitempty"`
 }
 
-type NewQuerier func([]byte) (Query, error)
+type NewQuery func([]byte) (Query, error)
 
 type Query interface {
-	Query(ip net.IP) (*IpInfo, error)
+	Query(ip net.IP) (*IpInfo, int, error)
+	// QueryLong todo use 2 uint64 to replace net.IP, for avoid net.IP memory allocation
+	QueryLong(ab, cd uint64) (*IpInfo, int, error)
+	BuildCache(ipList []string)
 	VersionInfo() *VersionInfo
 }
 

@@ -32,13 +32,13 @@ func newQuerier(data []byte) (tRet inf.Query, err error) {
 	return t, err
 }
 
-func (q *querier) Query(ip net.IP) (*inf.IpInfo, error) {
+func (q *querier) Query(ip net.IP) (*inf.IpInfo, int, error) {
 	cidr, info, err := q.Find(ip)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+	ones, _ := cidr.Mask.Size()
 	return &inf.IpInfo{
-		Cidr:      *cidr,
 		Country:   info[FieldCountry],
 		Province:  info[FieldProvince],
 		City:      info[FieldCity],
@@ -46,7 +46,7 @@ func (q *querier) Query(ip net.IP) (*inf.IpInfo, error) {
 		Asn:       info[FieldASNumber],
 		Continent: info[FieldContinent],
 		Line:      info[FieldLine],
-	}, nil
+	}, ones, nil
 }
 
 func (t *querier) check() error {
@@ -58,6 +58,13 @@ func (t *querier) check() error {
 		log.Println(r, m, err)
 	}
 	return nil
+}
+
+func (q *querier) BuildCache(ipList []string) {
+}
+
+func (q *querier) QueryLong(ab, cd uint64) (*inf.IpInfo, int, error) {
+	return nil, 0, nil
 }
 
 func (q *querier) Find(ip net.IP) (*net.IPNet, map[string]string, error) {

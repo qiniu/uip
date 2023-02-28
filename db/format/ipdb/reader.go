@@ -39,10 +39,11 @@ type reader struct {
 	meta            MetaData
 	data            []byte
 	continentOffset int
-	ipV4Cache       []int
+	ipV4BitsCache   []uint
 }
 
-const cacheDepth = 12
+const cacheDepth = 14
+const iOff = 5
 
 func newReaderFromBytes(data []byte) (*reader, error) {
 	var meta MetaData
@@ -85,7 +86,7 @@ func newReaderFromBytes(data []byte) (*reader, error) {
 			}
 		}
 		db.v4offset = node
-		db.initCache()
+		db.initBitsCache()
 	}
 	return db, nil
 }
@@ -98,19 +99,30 @@ func bytesToIndex(b []byte) int {
 	return (0xFF&int(b[0]))<<8>>(16-cacheDepth) | (0xFF&int(b[1]))>>(16-cacheDepth)
 }
 
-func (db *reader) initCache() {
-	db.ipV4Cache = make([]int, 1<<cacheDepth)
+func (db *reader) setCache(i int) {
+	b := indexToBytes(i)
+	node, off := db.readDepth(db.v4offset, cacheDepth, 0, b)
+	db.ipV4BitsCache[i] = (uint(node) << iOff) | uint(off)
+}
+
+func (db *reader) getCache(ip net.IP) (int, int) {
+	r := db.ipV4BitsCache[bytesToIndex(ip)]
+	node := int(r >> iOff)
+	i := int(r & 0x1F)
+	return node, i
+}
+
+func (db *reader) initBitsCache() {
+	db.ipV4BitsCache = make([]uint, 1<<cacheDepth)
 	//construct cache from binary trie tree for reduce read memory time
-	for i := 0; i < len(db.ipV4Cache); i++ {
-		b := indexToBytes(i)
-		node, _ := db.readDepth(db.v4offset, cacheDepth, 0, b)
-		db.ipV4Cache[i] = node
+	for i := 0; i < len(db.ipV4BitsCache); i++ {
+		db.setCache(i)
 	}
 	return
 }
 
 func (db *reader) findMap(addr net.IP, language string) (*net.IPNet, map[string]string, error) {
-	ret, ipNet, err := db.find1(addr, language)
+	ret, mask, err := db.find1(addr, language)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -119,6 +131,13 @@ func (db *reader) findMap(addr net.IP, language string) (*net.IPNet, map[string]
 	for i, v := range db.meta.Fields {
 		m[v] = ret[i]
 	}
+	var ip = addr.To4()
+	if ip == nil {
+		ip = addr.To16()
+	}
+	cidrMask := net.CIDRMask(mask, len(ip)*8)
+	ipNet := &net.IPNet{IP: addr.Mask(cidrMask), Mask: cidrMask}
+
 	return ipNet, m, nil
 }
 
@@ -151,50 +170,47 @@ func (db *reader) decodeInfo(body []byte, off int) ([]string, error) {
 	return ret, nil
 }
 
-func (db *reader) find1(addr net.IP, language string) ([]string, *net.IPNet, error) {
+func (db *reader) find1(addr net.IP, language string) ([]string, int, error) {
 	off, ok := db.meta.Languages[language]
 	if !ok {
-		return nil, nil, db2.ErrNoSupportLanguage
+		return nil, 0, db2.ErrNoSupportLanguage
 	}
-	body, ipNet, err := db.find0(addr)
+	_, body, mask, err := db.find0(addr)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	ret, err := db.decodeInfo(body, off)
-	return ret, ipNet, err
+	return ret, mask, err
 }
 
-func (db *reader) find0(ipv net.IP) ([]byte, *net.IPNet, error) {
+func (db *reader) find0(ipv net.IP) (int, []byte, int, error) {
 	var bitCount int
 	var ip net.IP
 	if ip = ipv.To4(); ip != nil {
 		if !db.HasIPv4() {
-			return nil, nil, db2.ErrNoSupportIPv4
+			return 0, nil, 0, db2.ErrNoSupportIPv4
 		}
 		bitCount = 32
 	} else if ip = ipv.To16(); ip != nil {
 		if !db.HasIPv6() {
-			return nil, nil, db2.ErrNoSupportIPv6
+			return 0, nil, 0, db2.ErrNoSupportIPv6
 		}
 		bitCount = 128
 	} else {
-		return nil, nil, db2.ErrIPFormat
+		return 0, nil, 0, db2.ErrIPFormat
 	}
 
 	node, mask, err := db.search(ip, bitCount)
 	if err != nil || node < 0 {
-		return nil, nil, err
+		return 0, nil, 0, err
 	}
-
-	cidrMask := net.CIDRMask(mask, len(ip)*8)
-	ipNet := &net.IPNet{IP: ipv.Mask(cidrMask), Mask: cidrMask}
 
 	body, err := db.resolve(node)
 	if err != nil {
-		return nil, nil, err
+		return 0, nil, 0, err
 	}
 
-	return body, ipNet, nil
+	return node, body, mask, nil
 }
 
 func (db *reader) search(ip net.IP, bitCount int) (int, int, error) {
@@ -206,12 +222,11 @@ func (db *reader) search(ip net.IP, bitCount int) (int, int, error) {
 		node = 0
 	}
 	i := 0
-	if db.ipV4Cache != nil && bitCount == 32 {
-		node = db.ipV4Cache[bytesToIndex(ip)]
+	if db.ipV4BitsCache != nil && bitCount == 32 {
+		node, i = db.getCache(ip)
 		if node > db.nodeCount {
 			return node, i, nil
 		}
-		i = cacheDepth
 	}
 
 	node, i = db.readDepth(node, bitCount, i, ip)

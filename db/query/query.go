@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/qiniu/uip/db"
 	"github.com/qiniu/uip/db/format"
@@ -34,25 +35,26 @@ func NewDbFromBytes(kind string, b []byte) (*Db, error) {
 	if err != nil {
 		return nil, err
 	}
+	q.BuildCache(strings.Split(ipList, "\n"))
 	return &Db{q}, nil
 }
 
-func (q *Db) QueryStr(ipStr string) (*inf.IpInfo, error) {
+func (q *Db) QueryStr(ipStr string) (*inf.IpInfo, int, error) {
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
-		return nil, errors.New("invalid ip: " + ipStr)
+		return nil, 0, errors.New("invalid ip: " + ipStr)
 	}
 	return q.Query(ip)
 }
 
-func (q *Db) QueryU32(i uint32) (*inf.IpInfo, error) {
+func (q *Db) QueryU32(i uint32) (*inf.IpInfo, int, error) {
 	ip := ipnet.Uint32ToIPv4(i)
 	return q.Query(ip)
 }
 
 func (q *Db) CheckV4() error {
 	google := net.ParseIP("8.8.8.8")
-	info, err := q.Query(google)
+	info, _, err := q.Query(google)
 	if err != nil {
 		return err
 	}
@@ -60,7 +62,7 @@ func (q *Db) CheckV4() error {
 		return db.ErrCheckFailed
 	}
 	dnspod := net.ParseIP("119.29.29.29")
-	info, err = q.Query(dnspod)
+	info, _, err = q.Query(dnspod)
 	if err != nil {
 		return err
 	}
@@ -72,7 +74,7 @@ func (q *Db) CheckV4() error {
 
 func (q *Db) CheckV6() error {
 	google := net.ParseIP("2001:4860:4860::8888")
-	info, err := q.Query(google)
+	info, _, err := q.Query(google)
 	if err != nil {
 		return err
 	}
@@ -80,7 +82,7 @@ func (q *Db) CheckV6() error {
 		return db.ErrCheckFailed
 	}
 	cloudFlare := net.ParseIP("2606:4700:4700::1111")
-	info, err = q.Query(cloudFlare)
+	info, _, err = q.Query(cloudFlare)
 	if err != nil {
 		return err
 	}
@@ -90,13 +92,13 @@ func (q *Db) CheckV6() error {
 	return nil
 }
 
-func (q *Db) Query(ip net.IP) (*inf.IpInfo, error) {
-	info, err := q.q.Query(ip)
+func (q *Db) Query(ip net.IP) (*inf.IpInfo, int, error) {
+	info, mask, err := q.q.Query(ip)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return info, nil
+	return info, mask, nil
 }
 
 // version

@@ -109,13 +109,14 @@ func (f *_Filter) extract(data []string) []string {
 	}
 }
 
-func (e *Exporter) Select(fMap []field.Pair) []field.Pair {
-	var ret = make([]field.Pair, 0, len(e.fields))
-	for _, f := range e.fields {
+func Select(fMap map[string]string, fields []string) []field.Pair {
+	var ret = make([]field.Pair, 0, len(fields))
+	for _, f := range fields {
 		var p field.Pair
-		for _, v := range fMap {
-			if v.Ext == f {
-				p = v
+		for k, v := range fMap {
+			if k == f {
+				p.Intern = v
+				p.Ext = f
 				break
 			}
 		}
@@ -145,10 +146,14 @@ func (e *Exporter) Export(fieldMap []field.Pair, data map[string]string) []strin
 	return ret
 }
 
-func ParseRule(rule string) *Exporter {
+func ParseRule(rule string) inf.Exporter {
+	if rule == "" {
+		return nil
+	}
 	var ret = &Exporter{
 		filters: make([]*_Filter, 0),
 	}
+
 	groups := strings.Split(rule, SelectorGroupSep)
 	for i, group := range groups {
 		fields := strings.Split(group, SelectorFieldSep)
@@ -180,15 +185,15 @@ func ParseRule(rule string) *Exporter {
 	return ret
 }
 
-func BuildIPData(fieldArray []field.Pair, exporter inf.Exporter, version *inf.VersionInfo, find inf.Find) (*inf.IpData, error) {
+func BuildIPData(fieldMap map[string]string, fields []string, ept inf.Exporter, version *inf.VersionInfo, find inf.Find) (*inf.IpData, error) {
 	var ret inf.IpData
-	var fieldsMap = fieldArray
-	if exporter == nil {
-		ret.Fields = field.ExtKeys(fieldArray)
+	var fieldsMap = make([]field.Pair, 0, len(fields))
+	if nil == ept {
+		ret.Fields = field.ExtKeys(fieldMap, fields)
 	} else {
-		ret.Fields = exporter.Fields()
-		fieldsMap = exporter.Select(fieldArray)
+		ret.Fields = ept.Fields()
 	}
+	fieldsMap = Select(fieldMap, ret.Fields)
 	ret.Ips = make([]inf.IpRaw, 0, version.Count+1)
 	var marker net.IP
 	if version.IsIpV6() {
@@ -205,8 +210,19 @@ func BuildIPData(fieldArray []field.Pair, exporter inf.Exporter, version *inf.Ve
 		}
 		var values []string
 
-		if exporter != nil {
-			values = exporter.Export(fieldsMap, info)
+		if ept != nil {
+			values = ept.Export(fieldsMap, info)
+		} else {
+			for _, v := range ret.Fields {
+				infK, ok := fieldMap[v]
+				if !ok {
+					values = append(values, "")
+				} else if f, ok := info[infK]; ok {
+					values = append(values, f)
+				} else {
+					values = append(values, "")
+				}
+			}
 		}
 
 		if reflect.DeepEqual(values, prevInfo) {

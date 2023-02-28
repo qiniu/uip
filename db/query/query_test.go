@@ -19,9 +19,10 @@ func TestDb_Query(t *testing.T) {
 	if err != nil {
 		return
 	}
-	ip := net.ParseIP("220.248.53.61")
-	info, err := db.Query(ip)
+	ip := net.ParseIP("220.248.53.1")
+	info, mask, err := db.Query(ip)
 	assert.Nil(t, err)
+	assert.Less(t, 16, mask)
 	assert.NotNil(t, info)
 	log.Println(db.Query(ip))
 }
@@ -36,20 +37,20 @@ func TestDbv6_Query(t *testing.T) {
 		return
 	}
 	ip := net.ParseIP("2001:4860:4860::8888")
-	info, err := db.Query(ip)
+	info, mask, err := db.Query(ip)
 	assert.Nil(t, err)
 	assert.NotNil(t, info)
+	assert.Greater(t, 16, mask)
 	log.Println(db.Query(ip))
 }
 
 // only search ipdb
 // cpu: Intel(R) Core(TM) i7-1068NG7 CPU @ 2.30GHz
 //BenchmarkDb_Query
-//BenchmarkDb_Query-8   	 2558755	       316.3 ns/op
+//BenchmarkDb_Query-8   	 2558755	       52.63 ns/op
 
 func BenchmarkDb_Query(b *testing.B) {
 	ipdbPath := os.Getenv("IPDBv4_PATH")
-	ipdbPath = "/Users/long/github/qiniu/uip/ipv4.ipdb"
 	if ipdbPath == "" {
 		return
 	}
@@ -58,16 +59,16 @@ func BenchmarkDb_Query(b *testing.B) {
 	if err != nil {
 		return
 	}
-	ip := net.ParseIP("220.248.53.61")
+	ip := net.ParseIP("220.248.53.1")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err = db.Query(ip)
+		_, _, err = db.Query(ip)
 	}
 }
 
 // cpu: Intel(R) Core(TM) i7-1068NG7 CPU @ 2.30GHz
 // BenchmarkDbv6_Query
-// BenchmarkDbv6_Query-8   	 2172760	       528.3 ns/op
+// BenchmarkDbv6_Query-8   	 2172760	       319.8 ns/op
 func BenchmarkDbv6_Query(b *testing.B) {
 	ipdbPath := os.Getenv("IPDBv6_PATH")
 	if ipdbPath == "" {
@@ -81,6 +82,6 @@ func BenchmarkDbv6_Query(b *testing.B) {
 	ip := net.ParseIP("2001:4860:4860::8888")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err = db.Query(ip)
+		_, _, err = db.Query(ip)
 	}
 }

@@ -11,9 +11,14 @@ func dump(data []byte, exporter inf.Exporter) (*inf.IpData, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return export.BuildIPData(FieldsArray, exporter, db.version(),
+	ret, err := export.BuildIPData(CommonFieldsMap, db.meta.Fields, exporter, db.version(),
 		func(ip net.IP) (cidr *net.IPNet, record map[string]string, err error) {
-			return db.findMap(ip, "CN")
+			ci, ret, err := db.findMap(ip, "CN")
+			return ci, ret, err
 		})
+	if err != nil {
+		return nil, err
+	}
+	ret.Version = db.version()
+	return ret, err
 }

@@ -23,9 +23,7 @@ func DumpFile(ipFile, rule string, ops []operate.Operate) (*inf.IpData, error) {
 		log.Println("Unsupported ip file format ", ipFile, extend)
 		return nil, db.ErrUnsupportedFormat
 	}
-	if rule == "" {
-		rule = export.DefaultRule
-	}
+
 	ipData, err := create(data, export.ParseRule(rule))
 	if err != nil {
 		log.Println("Dump ip file failed ", ipFile, err)

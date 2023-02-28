@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/qiniu/uip/db/field"
+	"github.com/qiniu/uip/db/field/export"
 	"github.com/qiniu/uip/db/inf"
 	"github.com/qiniu/uip/ipnet"
 )
@@ -68,6 +69,15 @@ func fieldToPair(fields []string) []field.Pair {
 	return ret
 }
 
+func fieldToMap(fields []string) map[string]string {
+	var ret map[string]string
+	ret = make(map[string]string, len(fields))
+	for _, f := range fields {
+		ret[f] = f
+	}
+	return ret
+}
+
 func (t *traversal) parseLine(line string) (*net.IPNet, map[string]string, error) {
 	var ret map[string]string
 	ret = make(map[string]string, len(t.Fields))
@@ -96,8 +106,8 @@ func (t *traversal) Dump(exporter inf.Exporter) (*inf.IpData, error) {
 		ret.Fields = t.Fields
 	} else {
 		ret.Fields = exporter.Fields()
-		fieldsMap = exporter.Select(fieldToPair(t.Fields))
 	}
+	fieldsMap = export.Select(fieldToMap(t.Fields), ret.Fields)
 	ret.Ips = make([]inf.IpRaw, 0, t.Version.Count+1)
 	var prevInfo []string
 	for _, line := range t.lines {

@@ -57,7 +57,7 @@ func (t *traversal) check() error {
 }
 
 func (t *traversal) dump(exporter inf.Exporter) (*inf.IpData, error) {
-	return export.BuildIPData(FieldsArray, exporter, t.versionInfo(), t.find)
+	return export.BuildIPData(CommonFieldsMap, Fields, exporter, t.versionInfo(), t.find)
 }
 
 func (t *traversal) find(ip net.IP) (*net.IPNet, map[string]string, error) {

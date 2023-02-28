@@ -2,11 +2,13 @@ package qiniu.uip.db.format.ipdb;
 
 import qiniu.uip.db.IPFormatException;
 import qiniu.uip.db.InvalidDatabaseException;
+import qiniu.uip.db.IpInfo;
 import qiniu.uip.db.NotFoundException;
 import qiniu.uip.util.Json;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashMap;
 
 
 final class Reader {
@@ -17,7 +19,9 @@ final class Reader {
     private int nodeCount;
     private byte[] data;
     private int v4offset;
-    private int[] ipv4Cache;
+    private int[] ipv4BitsCache;
+
+    private HashMap<Integer, IpInfo> resultCache;
 
     Reader(byte[] data) throws InvalidDatabaseException {
         this.data = data;
@@ -64,9 +68,91 @@ final class Reader {
             this.v4offset = node;
             initCache();
         } else {
-            this.ipv4Cache = null;
+            this.ipv4BitsCache = null;
             this.v4offset = 0;
         }
+    }
+
+    void buildCache(byte[][] ipList) {
+        this.resultCache = new HashMap<>();
+        for (byte[] ip : ipList) {
+            try {
+                query(ip, false, true);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+     IpInfo query(byte[] ip, boolean cache, boolean build) throws IPFormatException, InvalidDatabaseException {
+        int node = find0(ip);
+        if (cache && this.resultCache != null) {
+            IpInfo info = this.resultCache.get(node);
+            if (info != null) {
+                return info;
+            }
+         }
+        String[] parts = resolveNode(node, "CN");
+        if (parts == null) {
+            throw new IPFormatException("invalid ip address");
+        }
+        String[] fields = getSupportFields();
+        IpInfo info = new IpInfo();
+        for (int i = 0, l = parts.length; i < l; i++) {
+            switch (fields[i]) {
+                case "country_name":
+                    info.country = parts[i];
+                    break;
+                case "region_name":
+                    info.province = parts[i];
+                    break;
+                case "city_name":
+                    info.city = parts[i];
+                    break;
+                case "isp_domain":
+                    info.isp = parts[i];
+                    break;
+                case "asn":
+                    info.asn = parts[i];
+                case "line":
+                    info.line = parts[i];
+                    break;
+                case "district":
+                    info.district = parts[i];
+                    break;
+                case "continent_code":
+                    switch (parts[i]) {
+                        case "AS":
+                            info.continent = "亚洲";
+                            break;
+                        case "EU":
+                            info.continent = "欧洲";
+                            break;
+                        case "NA":
+                            info.continent = "北美洲";
+                            break;
+                        case "SA":
+                            info.continent = "南美洲";
+                            break;
+                        case "AF":
+                            info.continent = "非洲";
+                            break;
+                        case "OC":
+                            info.continent = "大洋洲";
+                            break;
+                        case "AN":
+                            info.continent = "南极洲";
+                            break;
+                        default:
+                            info.continent = parts[i];
+                    }
+                    break;
+            }
+        }
+        if (build && this.resultCache != null) {
+            this.resultCache.put(node, info);
+        }
+        return info;
     }
 
     private static byte[] indexToBytes(int i) {
@@ -94,29 +180,21 @@ final class Reader {
     }
 
     private void initCache() {
-        ipv4Cache = new int[1 << cacheDepth];
+        ipv4BitsCache = new int[1 << cacheDepth];
         //construct cache from binary trie tree for reduce read memory time
-        for (int i = 0; i < ipv4Cache.length; i++) {
+        for (int i = 0; i < ipv4BitsCache.length; i++) {
             byte[] b = indexToBytes(i);
             int node = readDepth(v4offset, cacheDepth, 0, b);
-            ipv4Cache[i] = node;
+            ipv4BitsCache[i] = node;
         }
     }
 
-    public String[] find(byte[] addr, String language) throws IPFormatException, InvalidDatabaseException {
-
-        int off;
-        try {
-            off = this.meta.languages.get(language);
-        } catch (NullPointerException e) {
-            return null;
-        }
-
-        if (addr.length == 16) {
+    int find0(byte[] ip) throws IPFormatException, InvalidDatabaseException {
+        if (ip.length == 16) {
             if (!isIPv6()) {
                 throw new IPFormatException("no support ipv6");
             }
-        } else if (addr.length == 4) {
+        } else if (ip.length == 4) {
             if (!isIPv4()) {
                 throw new IPFormatException("no support ipv4");
             }
@@ -127,12 +205,28 @@ final class Reader {
         // find node
         int node = 0;
         try {
-            node = this.findNode(addr);
+            node = this.findNode(ip);
         } catch (NotFoundException nfe) {
+            return 0;
+        }
+
+        return node;
+    }
+
+    String[] find(byte[] addr, String language) throws IPFormatException, InvalidDatabaseException {
+        int node = find0(addr);
+
+        return resolveNode(node, language);
+    }
+
+    private String[]resolveNode(int node, String language) throws InvalidDatabaseException {
+        int off;
+        try {
+            off = this.meta.languages.get(language);
+        } catch (NullPointerException e) {
             return null;
         }
 
-        // resolve node
         final int resolved = node - this.nodeCount + this.nodeCount * 8;
         if (resolved >= this.fileSize) {
             throw new InvalidDatabaseException("database resolve error");
@@ -174,9 +268,9 @@ final class Reader {
             node = this.v4offset;
         }
         int i = 0;
-        if (ipv4Cache != null && bit == 32) {
+        if (ipv4BitsCache != null && bit == 32) {
             int index = bytesToIndex(binary);
-            node = ipv4Cache[index];
+            node = ipv4BitsCache[index];
             if (node > this.nodeCount) {
                 return node;
             }
@@ -201,23 +295,23 @@ final class Reader {
         )).intValue();
     }
 
-    public boolean isIPv4() {
+     boolean isIPv4() {
         return (this.meta.ip_version & 0x01) == 0x01;
     }
 
-    public boolean isIPv6() {
+     boolean isIPv6() {
         return (this.meta.ip_version & 0x02) == 0x02;
     }
 
-    public int getBuildUTCTime() {
+     int getBuildUTCTime() {
         return this.meta.build;
     }
 
-    public String[] getSupportFields() {
+     String[] getSupportFields() {
         return this.meta.fields;
     }
 
-    public String getSupportLanguages() {
+     String getSupportLanguages() {
         return this.meta.languages.keySet().toString();
     }
 }

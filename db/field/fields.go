@@ -75,10 +75,14 @@ type Pair struct {
 	Intern string
 }
 
-func ExtKeys(f []Pair) []string {
+func ExtKeys(f map[string]string, internFields []string) []string {
 	var keys []string
-	for _, v := range f {
-		keys = append(keys, v.Ext)
+	for _, v := range internFields {
+		for k, v2 := range f {
+			if v == v2 {
+				keys = append(keys, k)
+			}
+		}
 	}
 	return keys
 }

@@ -107,15 +107,26 @@ const (
 	FieldLine    = "line"
 )
 
-var FieldsArray = []field.Pair{
-	{field.Country, FieldCountry},
-	{field.Province, FieldProvince},
-	{field.City, FieldCity},
-	{field.ISP, FieldISP},
-	{field.Asn, FieldASNumber},
-	{field.Continent, FieldContinent},
-	{field.Line, FieldLine},
-	{field.District, field.District},
+var Fields = []string{
+	FieldCountry,
+	FieldProvince,
+	FieldCity,
+	FieldISP,
+	FieldASNumber,
+	FieldContinent,
+	FieldLine,
+	field.District,
+}
+
+// CommonFieldsMap 公共字段映射
+var CommonFieldsMap = map[string]string{
+	field.Country:   FieldCountry,
+	field.Province:  FieldProvince,
+	field.City:      FieldCity,
+	field.ISP:       FieldISP,
+	field.Asn:       field.Asn,
+	field.Continent: FieldContinent,
+	field.Line:      field.Line,
 }
 
 func (m *Metadata) IpType() inf.IpType {

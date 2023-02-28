@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	_ "github.com/qiniu/uip/db/format/awdb"
 	_ "github.com/qiniu/uip/db/format/ipdb"
@@ -17,6 +18,10 @@ func main() {
 	q, err := query.NewDb(f)
 	if err != nil {
 		log.Println(err)
+		return
+	}
+	if strings.HasPrefix(ip, "v") {
+		fmt.Println(q.VersionInfo())
 		return
 	}
 	i, err := q.QueryStr(ip)

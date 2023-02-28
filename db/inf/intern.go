@@ -21,7 +21,6 @@ type Dump func([]byte, Exporter) (*IpData, error)
 
 type Exporter interface {
 	Fields() []string
-	Select(fMap []field.Pair) []field.Pair
 	Export(fieldMap []field.Pair, data map[string]string) []string
 }
 

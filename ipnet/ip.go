@@ -93,3 +93,12 @@ func IsFirstIP(ip net.IP, ipv6 bool) bool {
 	}
 	return ip.Equal(net.IPv4zero)
 }
+
+func IpNet(addr net.IP, mask int) *net.IPNet {
+	var ip = addr.To4()
+	if ip == nil {
+		ip = addr.To16()
+	}
+	cidrMask := net.CIDRMask(mask, len(ip)*8)
+	return &net.IPNet{IP: addr.Mask(cidrMask), Mask: cidrMask}
+}

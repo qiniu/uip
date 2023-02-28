@@ -95,6 +95,8 @@ var CommonFieldsMap = map[string]string{
 	field.Latitude:       FieldLatitude,
 	field.Longitude:      FieldLongitude,
 	field.ChinaAdminCode: FieldChinaAdminCode,
+	field.District:       field.District,
+	field.Line:           field.Line,
 }
 
 const IPv4 = 0x01
@@ -109,17 +111,6 @@ type MetaData struct {
 	Fields    []string       `json:"fields"`
 	Version   string         `json:"version"`
 	Extra     []string       `json:"extra"`
-}
-
-var FieldsArray = []field.Pair{
-	{field.Country, FieldCountryName},
-	{field.Province, FieldRegionName},
-	{field.City, FieldCityName},
-	{field.ISP, FieldISPDomain},
-	{field.Asn, field.Asn},
-	{field.Continent, FieldContinentCode},
-	{field.Line, field.Line},
-	{field.District, field.District},
 }
 
 func covertFields(fields []string) []string {

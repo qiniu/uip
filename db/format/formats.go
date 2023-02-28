@@ -8,7 +8,7 @@ func RegisterDumpFormat(ext string, create inf.Dump) {
 	dumpFormats[ext] = create
 }
 
-func RegisterQueryFormat(ext string, create inf.NewQuerier) {
+func RegisterQueryFormat(ext string, create inf.NewQuery) {
 	queryFormats[ext] = create
 }
 
@@ -20,7 +20,7 @@ func GetDumpFormat(ext string) inf.Dump {
 	return dumpFormats[ext]
 }
 
-func GetQueryFormat(ext string) inf.NewQuerier {
+func GetQueryFormat(ext string) inf.NewQuery {
 	return queryFormats[ext]
 }
 
@@ -30,6 +30,6 @@ func GetPackFormat(ext string) inf.Pack {
 
 var dumpFormats = map[string]inf.Dump{}
 
-var queryFormats = map[string]inf.NewQuerier{}
+var queryFormats = map[string]inf.NewQuery{}
 
 var packFormats = map[string]inf.Pack{}

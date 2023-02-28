@@ -1,6 +1,7 @@
 package operate
 
 import (
+	"log"
 	"reflect"
 
 	"github.com/qiniu/uip/db/field"
@@ -128,5 +129,6 @@ func MergeNearNetwork(ipd *inf.IpData) {
 			})
 		}
 	}
+	log.Println("version", ipd.Version, "len", len(ipd.Ips))
 	ipd.Version.Count = uint32(len(ipd.Ips))
 }

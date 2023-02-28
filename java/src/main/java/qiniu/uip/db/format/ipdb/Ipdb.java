@@ -16,65 +16,20 @@ public final class Ipdb implements Query {
         reader = new Reader(dat);
     }
 
+
+    @Override
     public IpInfo query(byte[] ip) throws IPFormatException, InvalidDatabaseException {
-        String[] parts = reader.find(ip, "CN");
-        if (parts == null) {
-            throw new IPFormatException("invalid ip address");
-        }
-        String[] fields = reader.getSupportFields();
-        IpInfo info = new IpInfo();
-        for (int i = 0, l = parts.length; i < l; i++) {
-            switch (fields[i]) {
-                case "country_name":
-                    info.country = parts[i];
-                    break;
-                case "region_name":
-                    info.province = parts[i];
-                    break;
-                case "city_name":
-                    info.city = parts[i];
-                    break;
-                case "isp_domain":
-                    info.isp = parts[i];
-                    break;
-                case "asn":
-                    info.asn = parts[i];
-                case "line":
-                    info.line = parts[i];
-                    break;
-                case "district":
-                    info.district = parts[i];
-                    break;
-                case "continent_code":
-                    switch (parts[i]) {
-                        case "AS":
-                            info.continent = "亚洲";
-                            break;
-                        case "EU":
-                            info.continent = "欧洲";
-                            break;
-                        case "NA":
-                            info.continent = "北美洲";
-                            break;
-                        case "SA":
-                            info.continent = "南美洲";
-                            break;
-                        case "AF":
-                            info.continent = "非洲";
-                            break;
-                        case "OC":
-                            info.continent = "大洋洲";
-                            break;
-                        case "AN":
-                            info.continent = "南极洲";
-                            break;
-                        default:
-                            info.continent = parts[i];
-                    }
-                    break;
-            }
-        }
-        return info;
+        return reader.query(ip, true, false);
+    }
+
+    @Override
+    public IpInfo query(long ab, long cd) throws IPFormatException, InvalidDatabaseException {
+        return null;
+    }
+
+    @Override
+    public void buildCache(byte[][] ipList) {
+        reader.buildCache(ipList);
     }
 
     public VersionInfo version() {
