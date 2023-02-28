@@ -73,6 +73,24 @@ final class Reader {
         }
     }
 
+    private static byte[] indexToBytes(int i) {
+        int i1 = (i << (16 - cacheDepth)) >> 8;
+        int i2 = 0xFF & (i << (16 - cacheDepth));
+        return new byte[]{(byte) i1, (byte) i2};
+    }
+
+    private static long bytesToLong(byte a, byte b, byte c, byte d) {
+        return int2long((((a & 0xff) << 24) | ((b & 0xff) << 16) | ((c & 0xff) << 8) | (d & 0xff)));
+    }
+
+    private static long int2long(int i) {
+        long l = i & 0x7fffffffL;
+        if (i < 0) {
+            l |= 0x080000000L;
+        }
+        return l;
+    }
+
     void buildCache(byte[][] ipList) {
         this.resultCache = new HashMap<>();
         for (byte[] ip : ipList) {
@@ -84,14 +102,14 @@ final class Reader {
         }
     }
 
-     IpInfo query(byte[] ip, boolean cache, boolean build) throws IPFormatException, InvalidDatabaseException {
+    IpInfo query(byte[] ip, boolean cache, boolean build) throws IPFormatException, InvalidDatabaseException {
         int node = find0(ip);
         if (cache && this.resultCache != null) {
             IpInfo info = this.resultCache.get(node);
             if (info != null) {
                 return info;
             }
-         }
+        }
         String[] parts = resolveNode(node, "CN");
         if (parts == null) {
             throw new IPFormatException("invalid ip address");
@@ -155,24 +173,6 @@ final class Reader {
         return info;
     }
 
-    private static byte[] indexToBytes(int i) {
-        int i1 = (i << (16 - cacheDepth)) >> 8;
-        int i2 = 0xFF & (i << (16 - cacheDepth));
-        return new byte[]{(byte) i1, (byte) i2};
-    }
-
-    private static long bytesToLong(byte a, byte b, byte c, byte d) {
-        return int2long((((a & 0xff) << 24) | ((b & 0xff) << 16) | ((c & 0xff) << 8) | (d & 0xff)));
-    }
-
-    private static long int2long(int i) {
-        long l = i & 0x7fffffffL;
-        if (i < 0) {
-            l |= 0x080000000L;
-        }
-        return l;
-    }
-
     private int bytesToIndex(byte[] b) {
         int i1 = (0xFF & (int) (b[0])) << 8 >> (16 - cacheDepth);
         int i2 = (0xFF & (int) (b[1])) >> (16 - cacheDepth);
@@ -219,7 +219,7 @@ final class Reader {
         return resolveNode(node, language);
     }
 
-    private String[]resolveNode(int node, String language) throws InvalidDatabaseException {
+    private String[] resolveNode(int node, String language) throws InvalidDatabaseException {
         int off;
         try {
             off = this.meta.languages.get(language);
@@ -295,23 +295,23 @@ final class Reader {
         )).intValue();
     }
 
-     boolean isIPv4() {
+    boolean isIPv4() {
         return (this.meta.ip_version & 0x01) == 0x01;
     }
 
-     boolean isIPv6() {
+    boolean isIPv6() {
         return (this.meta.ip_version & 0x02) == 0x02;
     }
 
-     int getBuildUTCTime() {
+    int getBuildUTCTime() {
         return this.meta.build;
     }
 
-     String[] getSupportFields() {
+    String[] getSupportFields() {
         return this.meta.fields;
     }
 
-     String getSupportLanguages() {
+    String getSupportLanguages() {
         return this.meta.languages.keySet().toString();
     }
 }

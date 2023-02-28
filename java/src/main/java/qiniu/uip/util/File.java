@@ -7,6 +7,7 @@ import java.io.IOException;
 public final class File {
     private File() {
     }
+
     public static byte[] readAll(String path) throws IOException {
         FileInputStream in = new FileInputStream(path);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
