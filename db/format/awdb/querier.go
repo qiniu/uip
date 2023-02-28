@@ -63,10 +63,6 @@ func (t *querier) check() error {
 func (q *querier) BuildCache(ipList []string) {
 }
 
-func (q *querier) QueryLong(ab, cd uint64) (*inf.IpInfo, int, error) {
-	return nil, 0, nil
-}
-
 func (q *querier) Find(ip net.IP) (*net.IPNet, map[string]string, error) {
 	var record interface{}
 	ipNet, _, err := q.reader.LookupNetwork(ip, &record)

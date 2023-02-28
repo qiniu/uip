@@ -23,11 +23,6 @@ public final class Ipdb implements Query {
     }
 
     @Override
-    public IpInfo query(long ab, long cd) throws IPFormatException, InvalidDatabaseException {
-        return null;
-    }
-
-    @Override
     public void buildCache(byte[][] ipList) {
         reader.buildCache(ipList);
     }

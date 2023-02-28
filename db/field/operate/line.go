@@ -73,7 +73,7 @@ func AttachLineByAsn(data *inf.IpData, asnLine map[string]string, asnLineVer str
 
 func queryLine(ipnet *net.IPNet, line inf.Query) (ispline string) {
 	ipStart := ipnet.IP
-	l, err := line.Query(ipStart)
+	l, _, err := line.Query(ipStart)
 	if err != nil {
 		log.Println(ipStart, err)
 		return

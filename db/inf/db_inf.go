@@ -23,8 +23,6 @@ type NewQuery func([]byte) (Query, error)
 
 type Query interface {
 	Query(ip net.IP) (*IpInfo, int, error)
-	// QueryLong todo use 2 uint64 to replace net.IP, for avoid net.IP memory allocation
-	QueryLong(ab, cd uint64) (*IpInfo, int, error)
 	BuildCache(ipList []string)
 	VersionInfo() *VersionInfo
 }

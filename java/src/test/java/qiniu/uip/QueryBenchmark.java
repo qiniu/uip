@@ -14,7 +14,6 @@ public class QueryBenchmark {
 
     public static void main(String[] args) throws IOException, IPFormatException {
         String file = System.getenv("IPDBv4_PATH");
-        file = "/Users/long/github/qiniu/uip/ipv4.ipdb";
         if (file == null) {
             return;
         }

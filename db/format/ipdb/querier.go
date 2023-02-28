@@ -33,10 +33,6 @@ func (q *querier) BuildCache(ipList []string) {
 	}
 }
 
-func (q *querier) QueryLong(ab, cd uint64) (*inf.IpInfo, int, error) {
-	return nil, 0, nil
-}
-
 func (q *querier) Query(ip net.IP) (*inf.IpInfo, int, error) {
 	_, info, mask, err := q.QueryInternal(ip, true)
 	return info, mask, err

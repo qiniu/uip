@@ -20,7 +20,7 @@ func (s *server) ListenAndServe(addr string) error {
 	})
 	m.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		ip := request.URL.Path[1:]
-		i, err := s.QueryStr(ip)
+		i, _, err := s.QueryStr(ip)
 		if err != nil {
 			writer.WriteHeader(404)
 			return

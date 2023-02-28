@@ -24,7 +24,7 @@ func main() {
 		fmt.Println(q.VersionInfo())
 		return
 	}
-	i, err := q.QueryStr(ip)
+	i, _, err := q.QueryStr(ip)
 	if err != nil {
 		log.Println(err)
 		return
