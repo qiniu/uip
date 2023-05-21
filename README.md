@@ -2,7 +2,7 @@ universal IP query/dump/pack library
 ===================================
 Support for IPv4, IPv6
 Support Format: awdb, ipdb, plain text
-Support Language: Go, Java
+Support Language: Go, Java, Rust
 
 Convert Format
 --------------
