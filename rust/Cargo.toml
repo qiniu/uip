@@ -1,0 +1,20 @@
+[package]
+name = "qnip"
+version = "0.1.0"
+edition = "2021"
+authors = ["bailong <sdk@qiniu.com>", "Shanghai Qiniu Information Technologies Co., Ltd."]
+rust-version = "1.60.0"
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/qiniu/uip.git"
+homepage = "https://www.qiniu.com"
+description = "Qiniu IP Query library for Rust"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+byteorder = "1.4.0"
+log = "0.4.0"
+env_logger = "0.10.0"
+serde_json = "1.0.0"
+serde = { version = "1.0.0", features = ["derive"] }

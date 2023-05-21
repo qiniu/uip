@@ -179,6 +179,7 @@ final class Reader {
         return i1 | i2;
     }
 
+
     private void initCache() {
         ipv4BitsCache = new int[1 << cacheDepth];
         //construct cache from binary trie tree for reduce read memory time
@@ -271,13 +272,13 @@ final class Reader {
         if (ipv4BitsCache != null && bit == 32) {
             int index = bytesToIndex(binary);
             node = ipv4BitsCache[index];
-            if (node > this.nodeCount) {
+            if (node >= this.nodeCount) {
                 return node;
             }
             i = cacheDepth;
         }
         node = readDepth(node, bit, i, binary);
-        if (node > this.nodeCount) {
+        if (node >= this.nodeCount) {
             return node;
         }
 
