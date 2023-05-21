@@ -2,6 +2,13 @@
 name = "qnip"
 version = "0.1.0"
 edition = "2021"
+authors = ["bailong <sdk@qiniu.com>", "Shanghai Qiniu Information Technologies Co., Ltd."]
+rust-version = "1.60.0"
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/qiniu/uip.git"
+homepage = "https://www.qiniu.com"
+description = "Qiniu IP Query library for Rust"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

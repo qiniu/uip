@@ -255,13 +255,3 @@ impl Reader{
         node
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn meta_deser() {
-
-    }
-}
